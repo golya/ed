@@ -24,5 +24,14 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+    {ok, Pools} = application:get_env(ed, pools),
+    PoolSpecs = lists:map(fun({Name, SizeArgs, WorkerArgs}) ->
+        PoolArgs = [{name, {local, Name}},
+                    {worker_module, ed_caller}] ++ SizeArgs,
+        poolboy:child_spec(Name, PoolArgs, WorkerArgs)
+    end, Pools),
 
+    EdCron = {ed_cron, {ed_cron, start_link, []},
+    permanent, 2000, worker, [ed_cron]},
+
+    {ok, {{one_for_one, 10, 10}, PoolSpecs ++ [EdCron]}}.

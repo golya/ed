@@ -9,48 +9,27 @@
 %% Application callbacks
 %% ===================================================================
 
-start() ->    
+start() ->
     application:start(ed).
 
 start(_StartType, _StartArgs) ->
     io:format("ED stared.~n", []),
     application:start(ex_fcgi),
-    poc(),
+    application:start(inets),
+    application:start(crypto),
+    application:start(ssl),
+    application:start(cowboy),
     ed_sup:start_link().
 
 stop(_State) ->
+    application:stop(cowboy),
+    application:stop(ex_fcgi),
+    application:stop(inets),
+    application:start(crypto),
+    application:start(ssl),
     ok.
 
 poc() ->
-    {ok, _Pid} = ex_fcgi:start(fcgi, "127.0.0.1", 9000),
-    {ok, Path} = file:get_cwd(),
-    Params = [
-        {<<"GATEWAY_INTERFACE">>, <<"FastCGI/1.0">>},
-        {<<"REQUEST_METHOD">>, <<"GET">>},
-        {<<"SCRIPT_FILENAME">>, Path++<<"/index.php">>},
-        {<<"SCRIPT_NAME">>, <<"/index.php">>},
-        {<<"QUERY_STRING">>, <<"">>},
-        {<<"REQUEST_URI">>, <<"/index.php">>},
-        {<<"SERVER_PROTOCOL">>, <<"HTTP/1.1">>},
-        {<<"SERVER_SOFTWARE">>, <<"php/fcgiclient">>}
-    ],
-    {ok, Ref} = ex_fcgi:begin_request(fcgi, responder, Params, 3000),
-    get_messages(Ref),
-    ok.
-
-get_messages(Ref) ->
-    receive        
-        {ex_fcgi, Ref, Messages} ->            
-            io:format("messages: ~p~n", [Messages]),
-            case lists:last(Messages) of
-                {end_request,request_complete,0} ->            
-                    ok;
-                _ ->
-                    get_messages(Ref)
-            end;
-        {ex_fcgi_timeout, Ref} ->
-            io:format("got timeout~n", [])
-    after 2000 ->
-        io:format("got nothing~n", [])
-    end,
+    ed_cron:add_job([1000, {pfr, [{script_filename, <<"/index.php">>}]}]),
+    ed_cron:add_job([5000, {pfr, [{script_filename, <<"/slowdown.php">>}]}]),
     ok.

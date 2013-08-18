@@ -2,11 +2,15 @@
  [
   {description, ""},
   {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
+  {modules, [ed, ed_caller]},
+  {applications, [kernel, stdlib]},
   {mod, { ed_app, []}},
-  {env, []}
+  {env, [
+        {pools, [
+            {ed_caller, [
+                {size, 10},
+                {max_overflow, 20}
+            ], []}
+        ]}
+    ]}
  ]}.
