@@ -44,9 +44,8 @@ terminate(_Reason, _State) ->
 %% gen_server (call events)
 %% ====================================================================
 
-handle_call({execute_call, Params}, _From, State) ->
-    ok = fpm_call(Params, State#state.pid),
-    {reply, ok, State}.
+handle_call(_, _From, State) ->
+    {noreply, State}.
 
 %% ====================================================================
 %% gen_server (cast events)
@@ -66,7 +65,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 fpm_call(Params, Pid) ->
-    ScriptFilename = proplists:get_value(script_filename, Params),
+    ScriptFilename = proplists:get_value(<<"script_filename">>, Params),
     {ok, Path} = file:get_cwd(),
     CGIParams = [
         {<<"GATEWAY_INTERFACE">>, <<"FastCGI/1.0">>},

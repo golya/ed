@@ -1,9 +1,19 @@
+%% @author Adam Golya <adam.stork@gmail.com>
+
+%% @doc ED Erlang Deamon
+%%
+%% <ul>
+%%   <li><a href="overview-summary.html">ED User Manual</a></li>
+%% </ul>
+%%
+%% @type proplist() = [term()]
+%%
 -module(ed_app).
 
 -behaviour(application).
 
 %% Application callbacks
--export([start/0, start/2, stop/1, poc/0]).
+-export([start/0, start/2, stop/1]).
 
 %% ===================================================================
 %% Application callbacks
@@ -27,9 +37,4 @@ stop(_State) ->
     application:stop(inets),
     application:start(crypto),
     application:start(ssl),
-    ok.
-
-poc() ->
-    ed_cron:add_job([1000, {pfr, [{script_filename, <<"/index.php">>}]}]),
-    ed_cron:add_job([5000, {pfr, [{script_filename, <<"/slowdown.php">>}]}]),
     ok.

@@ -1,0 +1,7 @@
+{
+    "doc_root": "/tmp",
+    "jobs": [
+        {"time": 1000,  "pfr": {"script_filename": "/index.php"}},
+        {"time": 1000,  "pfr": {"script_filename": "/slowdown.php"}}
+    ]
+}

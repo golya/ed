@@ -41,6 +41,9 @@ add_job([MilliSec, {pfr, Params}]) ->
 
 init(SupervisorPid) ->
     io:format("start scheduler: ~p~n", [SupervisorPid]),
+    Config = get_config(),
+    add_jobs_by_config(Config),
+
     {ok, #state{supervisor=SupervisorPid}}.
 
 terminate(_Reason, _State) ->
@@ -50,10 +53,8 @@ terminate(_Reason, _State) ->
 %% gen_server (call events)
 %% ====================================================================
 
-handle_call({add_job, pfr, Params, MilliSec}, _From, State) ->
-    io:format("add new pfr job: ~p~n", [Params]),
-    ok = register_call({MilliSec, Params}),
-    {reply, ok, State}.
+handle_call(_, _From, State) ->
+    {noreply, State}.
 
 %% ====================================================================
 %% gen_server (cast events)
@@ -82,4 +83,23 @@ execute_call(MilliSec, Params) ->
         gen_server:cast(Worker, {execute_call, Params})
     end),
     register_call({MilliSec, Params}),
+    ok.
+
+get_config() ->
+    {ok, ConfigPath} = file:get_cwd(),
+    {ok, RawConfig} = file:read_file(ConfigPath ++ "/jobs.json"),
+    jiffy:decode(RawConfig).
+
+add_jobs_by_config({Config}) ->
+    DocRoot = proplists:get_value(<<"doc_root">>, Config),
+    Jobs = proplists:get_value(<<"jobs">>, Config),
+    lists:foreach(
+        fun ({Job}) ->
+            Time = proplists:get_value(<<"time">>, Job),
+            {Params} = proplists:get_value(<<"pfr">>, Job),
+            add_job([Time, {pfr, [{<<"doc_root">>, DocRoot} | Params]}]),
+            ok
+        end,
+        Jobs
+    ),
     ok.
