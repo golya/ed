@@ -1,4 +1,5 @@
 <?php
 sleep(2);
-print "slowdown";
+$response = "slowdown";
+echo json_encode($response);
 ?>

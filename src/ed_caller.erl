@@ -22,6 +22,8 @@
 
 -record(state, {pid}).
 
+-include("ed.hrl").
+
 %% ===================================================================
 %% API functions
 %% ===================================================================
@@ -66,18 +68,19 @@ code_change(_OldVsn, State, _Extra) ->
 
 fpm_call(Params, Pid) ->
     ScriptFilename = proplists:get_value(<<"script_filename">>, Params),
+    Query = proplists:get_value(<<"query_string">>, Params, <<"">>),
     {ok, Path} = file:get_cwd(),
     CGIParams = [
         {<<"GATEWAY_INTERFACE">>, <<"FastCGI/1.0">>},
         {<<"REQUEST_METHOD">>, <<"GET">>},
         {<<"SCRIPT_FILENAME">>, Path++ScriptFilename},
         {<<"SCRIPT_NAME">>, ScriptFilename},
-        {<<"QUERY_STRING">>, <<"">>},
+        {<<"QUERY_STRING">>, Query},
         {<<"REQUEST_URI">>, ScriptFilename},
         {<<"SERVER_PROTOCOL">>, <<"HTTP/1.1">>},
         {<<"SERVER_SOFTWARE">>, <<"php/fcgiclient">>}
     ],
-    {ok, Ref} = ex_fcgi:begin_request(Pid, responder, CGIParams, 3000),
+    {ok, Ref} = ex_fcgi:begin_request(Pid, responder, CGIParams, 1000000),
     get_messages(Ref),
     ok.
 
@@ -92,14 +95,37 @@ get_messages(Ref) ->
                     get_messages(Ref)
             end;
         {ex_fcgi_timeout, Ref} ->
-            io:format("got timeout~n", [])
-    after 20000 ->
-        io:format("got nothing~n", [])
+            ?DEBUG("got timeout", [])
+    after 1000000 ->
+        ?DEBUG("got nothing", [])
     end,
     ok.
 
 format_msg(Messages) ->
+    has_error(proplists:get_value(stderr, Messages, false)),
     Out = proplists:get_value(stdout, Messages),
     [_|Body] = binary:split(Out, <<"\r\n\r\n">>),
-    io:format("[~p] Body: ~p~n", [calendar:local_time(), Body]),
+    ?DEBUG("[~p] Body: ~p", [calendar:local_time(), Body]),
+    interpret_body(Body),
     ok.
+
+interpret_body(Body) ->
+    try
+        ParsedBody = jiffy:decode(Body),
+        serach_for_action(ParsedBody)
+    catch
+        Error:Reason ->  {Error, Reason}
+    end,
+    ok.
+
+
+serach_for_action({[{<<"requests">>, Requests}]}) ->
+    ed_cron:add_requests(Requests),
+    ok;
+serach_for_action(_) ->
+    not_found.
+
+has_error(false) ->
+    ok;
+has_error(Error) ->
+    ?DEBUG("Error found: ~p", [Error]).

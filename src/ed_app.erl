@@ -1,6 +1,7 @@
 %% @author Adam Golya <adam.stork@gmail.com>
 
-%% @doc ED Erlang Deamon
+%% @doc ED is a tentative project for examine concept about
+%%  erlang based php process handling.
 %%
 %% <ul>
 %%   <li><a href="overview-summary.html">ED User Manual</a></li>
